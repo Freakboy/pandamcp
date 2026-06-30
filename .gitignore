@@ -5,6 +5,12 @@ node_modules/
 dist/
 *.tsbuildinfo
 
+# Agent-generated planning/workflow artifacts
+docs/superpowers/
+.superpowers/
+.claude/
+.cursor/
+
 # Test and coverage output
 coverage/
 .nyc_output/
