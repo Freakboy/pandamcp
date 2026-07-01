@@ -21,7 +21,7 @@
     "stdio"
   ],
   "bin": {
-    "pandamcp": "./dist/cli.js"
+    "pandamcp": "dist/cli.js"
   },
   "files": [
     "dist/",
