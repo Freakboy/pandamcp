@@ -41,6 +41,64 @@ npm install
 npm run build
 ```
 
+## Use With npx
+
+After the package is published to npm, run it without a local checkout:
+
+```bash
+npx pandamcp --transport stdio -u http://127.0.0.1:9222
+```
+
+For MCP clients that spawn stdio servers, configure `npx` as the command:
+
+```json
+{
+  "mcpServers": {
+    "pandamcp": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "pandamcp",
+        "--transport",
+        "stdio",
+        "-u",
+        "http://127.0.0.1:9222"
+      ]
+    }
+  }
+}
+```
+
+For HTTP transports:
+
+```bash
+npx pandamcp --transport all --port 3333 -u http://127.0.0.1:9222
+```
+
+## Publish to npm
+
+Make sure you are logged in:
+
+```bash
+npm whoami
+```
+
+Run checks and inspect the publish contents:
+
+```bash
+npm test
+npm run typecheck
+npm pack --dry-run
+```
+
+Publish:
+
+```bash
+npm publish
+```
+
+`prepack` runs `npm run build` before `npm pack` and `npm publish`, so the package always includes fresh `dist/` output.
+
 ## Usage
 
 Connect through a CDP HTTP endpoint:

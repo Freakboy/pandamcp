@@ -41,6 +41,64 @@ npm install
 npm run build
 ```
 
+## 通过 npx 使用
+
+发布到 npm 后，可以不克隆仓库直接运行：
+
+```bash
+npx pandamcp --transport stdio -u http://127.0.0.1:9222
+```
+
+如果 MCP 客户端通过 stdio 启动 server，可以把 `npx` 配成 command：
+
+```json
+{
+  "mcpServers": {
+    "pandamcp": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "pandamcp",
+        "--transport",
+        "stdio",
+        "-u",
+        "http://127.0.0.1:9222"
+      ]
+    }
+  }
+}
+```
+
+HTTP transport 可以这样启动：
+
+```bash
+npx pandamcp --transport all --port 3333 -u http://127.0.0.1:9222
+```
+
+## 发布到 npm
+
+确认已经登录 npm：
+
+```bash
+npm whoami
+```
+
+运行检查并查看发布内容：
+
+```bash
+npm test
+npm run typecheck
+npm pack --dry-run
+```
+
+发布：
+
+```bash
+npm publish
+```
+
+`prepack` 会在 `npm pack` 和 `npm publish` 前自动运行 `npm run build`，确保发布包中包含最新的 `dist/` 输出。
+
 ## 使用方式
 
 通过 CDP HTTP endpoint 连接：

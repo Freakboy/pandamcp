@@ -3,11 +3,35 @@
   "version": "0.1.0",
   "description": "MCP server for CDP-compatible browsers with stdio, SSE, and Streamable HTTP transports.",
   "type": "module",
+  "license": "MIT",
+  "homepage": "https://github.com/Freakboy/pandamcp#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Freakboy/pandamcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Freakboy/pandamcp/issues"
+  },
+  "keywords": [
+    "mcp",
+    "cdp",
+    "lightpanda",
+    "browser-automation",
+    "sse",
+    "stdio"
+  ],
   "bin": {
     "pandamcp": "./dist/cli.js"
   },
+  "files": [
+    "dist/",
+    "LICENSE",
+    "README.md",
+    "README.zh-CN.md"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
+    "prepack": "npm run build",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc -p tsconfig.json --noEmit",
