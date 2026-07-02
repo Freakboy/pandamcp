@@ -20,6 +20,7 @@ describe("registerBrowserTools", () => {
       "browser_list_pages",
       "browser_navigate",
       "browser_title",
+      "browser_body_text",
       "browser_text",
       "browser_content",
       "browser_evaluate",

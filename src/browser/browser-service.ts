@@ -38,6 +38,10 @@ export class BrowserService {
     return { pageId, title: await this.backend.title(pageId) };
   }
 
+  async bodyText(pageId: string): Promise<{ pageId: string; text: string | null }> {
+    return { pageId, text: await this.backend.textContent(pageId, "body") };
+  }
+
   async textContent(
     input: PageSelectorInput
   ): Promise<{ pageId: string; selector: string; text: string | null }> {

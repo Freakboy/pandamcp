@@ -156,20 +156,38 @@ pandamcp -t mcp -b playwright -u http://127.0.0.1:9222
 
 ## 工具列表
 
-- `browser_new_page`
-- `browser_list_pages`
-- `browser_navigate`
-- `browser_title`
-- `browser_text`
-- `browser_content`
-- `browser_evaluate`
-- `browser_click`
-- `browser_fill`
-- `browser_press`
-- `browser_screenshot`
-- `browser_wait_for_text`
-- `browser_close_page`
-- `browser_close_browser`
+| 工具 | 作用 |
+| --- | --- |
+| `browser_new_page` | 新建页面，可选地立即打开一个 URL。 |
+| `browser_list_pages` | 列出已知页面，包含 `pageId`、URL 和标题。 |
+| `browser_navigate` | 导航已有页面；如果省略 `pageId`，会先新建页面。 |
+| `browser_title` | 读取当前页面标题。 |
+| `browser_body_text` | 直接读取文档正文文本，不需要调用方传 CSS selector。 |
+| `browser_text` | 读取第一个匹配 CSS selector 的元素 `textContent`。 |
+| `browser_content` | 读取当前页面 HTML。 |
+| `browser_evaluate` | 在页面里执行 JavaScript 表达式。 |
+| `browser_click` | 点击第一个匹配 CSS selector 的元素。 |
+| `browser_fill` | 设置第一个匹配 CSS selector 的元素值。 |
+| `browser_press` | 给当前 active element 发送键盘事件。 |
+| `browser_screenshot` | 截取 PNG 图片并返回 base64 数据。 |
+| `browser_wait_for_text` | 轮询页面正文，直到包含指定文本。 |
+| `browser_close_page` | 根据 `pageId` 关闭页面。 |
+| `browser_close_browser` | 关闭后端浏览器连接。 |
+
+## 已知缺口
+
+PandaMCP 当前覆盖了基础浏览器循环：新建页面、导航、读取标题/正文/selector 文本/HTML、执行 JavaScript、简单 selector 交互、截图、等待文本和关闭资源。
+
+还没有直接暴露的常见浏览器操作：
+
+- 页面历史：reload、back、forward。
+- 当前页面更多元信息：URL、ready state、viewport、user agent。
+- 更丰富的等待：等待 selector、URL、load state、network idle 或任意 JavaScript 条件。
+- 网络和控制台检查：请求列表、响应 body、console 消息、错误。
+- 浏览器状态：cookies、localStorage/sessionStorage、权限、地理位置。
+- 高级输入：hover、select option、drag and drop、file upload、focus/blur。
+- frames 和多上下文：iframe 选择、隔离上下文、类似 incognito 的 session。
+- downloads、PDF、tracing、accessibility snapshot 和 request interception。
 
 ## 基础验证
 

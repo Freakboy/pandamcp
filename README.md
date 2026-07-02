@@ -156,20 +156,38 @@ When `--transport mcp` or `--transport all` is enabled:
 
 ## Tools
 
-- `browser_new_page`
-- `browser_list_pages`
-- `browser_navigate`
-- `browser_title`
-- `browser_text`
-- `browser_content`
-- `browser_evaluate`
-- `browser_click`
-- `browser_fill`
-- `browser_press`
-- `browser_screenshot`
-- `browser_wait_for_text`
-- `browser_close_page`
-- `browser_close_browser`
+| Tool | Purpose |
+| --- | --- |
+| `browser_new_page` | Create a new page, optionally opening a URL immediately. |
+| `browser_list_pages` | List known pages with `pageId`, URL, and title. |
+| `browser_navigate` | Navigate an existing page, or create one when `pageId` is omitted. |
+| `browser_title` | Read the current page title. |
+| `browser_body_text` | Read the document body text directly, without requiring a selector. |
+| `browser_text` | Read `textContent` from the first element matching a CSS selector. |
+| `browser_content` | Read the current page HTML. |
+| `browser_evaluate` | Evaluate a JavaScript expression in the page. |
+| `browser_click` | Click the first element matching a CSS selector. |
+| `browser_fill` | Set the value of the first element matching a CSS selector. |
+| `browser_press` | Dispatch key events for the active element. |
+| `browser_screenshot` | Capture a PNG screenshot as base64 data. |
+| `browser_wait_for_text` | Poll the page body until it contains the requested text. |
+| `browser_close_page` | Close a page by `pageId`. |
+| `browser_close_browser` | Close the backend browser connection. |
+
+## Known Gaps
+
+PandaMCP currently covers the basic browser loop: create page, navigate, inspect title/body/selector text/HTML, evaluate JavaScript, interact with simple selectors, take screenshots, wait for text, and close resources.
+
+Common browser operations that are not directly exposed yet:
+
+- Page history: reload, back, and forward.
+- Current page metadata beyond title: URL, ready state, viewport, user agent.
+- Rich waits: wait for selector, URL, load state, network idle, or arbitrary JavaScript condition.
+- Network and console inspection: request list, response bodies, console messages, errors.
+- Browser state: cookies, localStorage/sessionStorage, permissions, geolocation.
+- Advanced input: hover, select option, drag and drop, file upload, focus/blur.
+- Frames and multiple contexts: iframe selection, isolated contexts, incognito-style sessions.
+- Downloads, PDFs, tracing, accessibility snapshots, and request interception.
 
 ## Validation
 

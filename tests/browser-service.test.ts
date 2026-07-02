@@ -4,6 +4,8 @@ import { BrowserService } from "../src/browser/browser-service.js";
 import type { BrowserBackend } from "../src/browser/types.js";
 
 class FakeBackend implements BrowserBackend {
+  lastTextSelector?: string;
+
   async connect() {}
   async close() {}
   async closePage() {}
@@ -24,7 +26,8 @@ class FakeBackend implements BrowserBackend {
     return "Example";
   }
 
-  async textContent() {
+  async textContent(_pageId: string, selector: string) {
+    this.lastTextSelector = selector;
     return "Hello";
   }
 
@@ -64,6 +67,17 @@ describe("BrowserService", () => {
       selector: "h1",
       text: "Hello"
     });
+  });
+
+  test("reads body text directly", async () => {
+    const backend = new FakeBackend();
+    const service = new BrowserService(backend);
+
+    await expect(service.bodyText("page-1")).resolves.toEqual({
+      pageId: "page-1",
+      text: "Hello"
+    });
+    expect(backend.lastTextSelector).toBe("body");
   });
 
   test("returns evaluate results with page context", async () => {

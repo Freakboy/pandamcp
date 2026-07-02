@@ -7,6 +7,7 @@ export const BROWSER_TOOL_NAMES = [
   "browser_list_pages",
   "browser_navigate",
   "browser_title",
+  "browser_body_text",
   "browser_text",
   "browser_content",
   "browser_evaluate",
@@ -81,6 +82,19 @@ export function registerBrowserTools(server: ToolServer, service: BrowserService
       annotations: { readOnlyHint: true, openWorldHint: true }
     },
     async ({ pageId }) => asToolResult(await service.title(pageId as string))
+  );
+
+  server.registerTool(
+    "browser_body_text",
+    {
+      title: "Body text",
+      description: "Read the visible document body text without requiring a CSS selector.",
+      inputSchema: {
+        pageId: z.string()
+      },
+      annotations: { readOnlyHint: true, openWorldHint: true }
+    },
+    async ({ pageId }) => asToolResult(await service.bodyText(pageId as string))
   );
 
   server.registerTool(
