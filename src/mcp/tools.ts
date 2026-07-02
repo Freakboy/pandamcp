@@ -538,8 +538,9 @@ function limitTool(
 }
 
 function asToolResult(value: unknown): ToolResult {
+  const structuredContent = isRecord(value) ? value : { result: value };
   return {
-    structuredContent: value,
+    structuredContent,
     content: [
       {
         type: "text",
@@ -547,4 +548,8 @@ function asToolResult(value: unknown): ToolResult {
       }
     ]
   };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

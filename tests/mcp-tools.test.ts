@@ -27,6 +27,26 @@ describe("registerBrowserTools", () => {
     expect(readToolNamesFromReadme("../README.md")).toEqual(BROWSER_TOOL_NAMES);
     expect(readToolNamesFromReadme("../README.zh-CN.md")).toEqual(BROWSER_TOOL_NAMES);
   });
+
+  test("wraps array tool results in object structured content", async () => {
+    const handlers = new Map<string, () => Promise<unknown>>();
+    const server = {
+      registerTool: vi.fn((name: string, _config: object, handler: () => Promise<unknown>) => {
+        handlers.set(name, handler);
+      })
+    };
+    const service = {
+      listPages: async () => [{ pageId: "page-1", url: "about:blank", title: "" }]
+    } as BrowserService;
+
+    registerBrowserTools(server, service);
+
+    await expect(handlers.get("browser_list_pages")?.()).resolves.toMatchObject({
+      structuredContent: {
+        result: [{ pageId: "page-1", url: "about:blank", title: "" }]
+      }
+    });
+  });
 });
 
 function readToolNamesFromReadme(path: string): string[] {

@@ -1,6 +1,6 @@
 {
   "name": "pandamcp",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "MCP bridge for Lightpanda/CDP browsers with stdio, SSE, and Streamable HTTP transports.",
   "type": "module",
   "license": "MIT",
