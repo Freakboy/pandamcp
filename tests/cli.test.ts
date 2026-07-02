@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { parseCliOptions } from "../src/cli-options.js";
+import { formatStartupInfo, parseCliOptions } from "../src/cli-options.js";
 
 describe("parseCliOptions", () => {
   test("supports all transports and HTTP CDP endpoint", () => {
@@ -53,6 +53,41 @@ describe("parseCliOptions", () => {
     expect(options.port).toBe(4444);
     expect(options.host).toBe("0.0.0.0");
     expect(options.startUrl).toBe("https://example.com");
+  });
+
+  test("supports version aliases", () => {
+    expect(parseCliOptions(["-v"]).version).toBe(true);
+    expect(parseCliOptions(["--version"]).version).toBe(true);
+  });
+
+  test("formats startup information", () => {
+    const lines = formatStartupInfo(
+      {
+        transport: "all",
+        backend: "raw-cdp",
+        cdpEndpoint: "http://127.0.0.1:9222",
+        host: "127.0.0.1",
+        port: 3333,
+        startUrl: "https://example.com"
+      },
+      {
+        version: "0.1.1",
+        toolCount: 52
+      }
+    );
+
+    expect(lines).toEqual([
+      "PandaMCP 0.1.1",
+      "Transport: all",
+      "Backend: raw-cdp",
+      "CDP endpoint: http://127.0.0.1:9222",
+      "Start URL: https://example.com",
+      "Tools: 52 browser_* tools",
+      "HTTP server: http://127.0.0.1:3333",
+      "SSE endpoint: http://127.0.0.1:3333/sse",
+      "MCP endpoint: http://127.0.0.1:3333/mcp",
+      "Use -h or --help for options."
+    ]);
   });
 
   test("rejects invalid transport values", () => {

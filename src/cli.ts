@@ -1,13 +1,22 @@
 #!/usr/bin/env node
+import { readFile } from "node:fs/promises";
 import type http from "node:http";
 
 import { createBrowserService } from "./browser/factory.js";
-import { helpText, parseCliOptions } from "./cli-options.js";
+import { formatStartupInfo, helpText, parseCliOptions } from "./cli-options.js";
+import { BROWSER_TOOL_NAMES } from "./mcp/tools.js";
 import { startHttpTransports } from "./transports/http-server.js";
 import { serveStdio } from "./transports/stdio.js";
 
 async function main(): Promise<void> {
   const options = parseCliOptions(process.argv.slice(2));
+  const version = await packageVersion();
+
+  if (options.version) {
+    console.log(version);
+    return;
+  }
+
   const service = createBrowserService({
     backend: options.backend,
     cdpEndpoint: options.cdpEndpoint
@@ -22,6 +31,10 @@ async function main(): Promise<void> {
   await service.connect();
   if (options.startUrl) {
     await service.newPage(options.startUrl);
+  }
+
+  for (const line of formatStartupInfo(options, { version, toolCount: BROWSER_TOOL_NAMES.length })) {
+    console.error(line);
   }
 
   if (options.transport === "stdio") {
@@ -42,13 +55,6 @@ async function main(): Promise<void> {
     service
   });
 
-  console.error(`PandaMCP listening on http://${options.host}:${options.port}`);
-  if (httpTransport === "sse" || httpTransport === "all") {
-    console.error(`SSE endpoint: http://${options.host}:${options.port}/sse`);
-  }
-  if (httpTransport === "mcp" || httpTransport === "all") {
-    console.error(`MCP endpoint: http://${options.host}:${options.port}/mcp`);
-  }
 }
 
 main().catch((error: unknown) => {
@@ -59,3 +65,10 @@ main().catch((error: unknown) => {
   console.error(error);
   process.exit(1);
 });
+
+async function packageVersion(): Promise<string> {
+  const packageJson = JSON.parse(
+    await readFile(new URL("../package.json", import.meta.url), "utf8")
+  ) as { version?: string };
+  return packageJson.version ?? "0.0.0";
+}

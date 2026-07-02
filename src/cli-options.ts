@@ -8,6 +8,7 @@ export interface CliOptions {
   host: string;
   port: number;
   startUrl?: string;
+  version?: boolean;
 }
 
 const transports = new Set<TransportMode>(["stdio", "sse", "mcp", "all"]);
@@ -39,6 +40,8 @@ export function parseCliOptions(argv: string[]): CliOptions {
       options.cdpEndpoint = readValue(argv, (index += 1), arg);
     } else if (arg === "-s" || arg === "--start-url") {
       options.startUrl = readValue(argv, (index += 1), "--start-url");
+    } else if (arg === "-v" || arg === "--version") {
+      options.version = true;
     } else if (arg === "-h" || arg === "--help") {
       throw new Error(helpText());
     } else {
@@ -60,8 +63,42 @@ export function helpText(): string {
     "  -w, --ws <url>           CDP WebSocket endpoint.",
     "  -H, --host <host>        HTTP bind host. Default: 127.0.0.1",
     "  -p, --port <port>        HTTP bind port. Default: 3333",
-    "  -s, --start-url <url>    Optional page to open during startup."
+    "  -s, --start-url <url>    Optional page to open during startup.",
+    "  -v, --version            Print PandaMCP version and exit."
   ].join("\n");
+}
+
+export function formatStartupInfo(
+  options: CliOptions,
+  meta: { version: string; toolCount: number }
+): string[] {
+  const lines = [
+    `PandaMCP ${meta.version}`,
+    `Transport: ${options.transport}`,
+    `Backend: ${options.backend}`,
+    `CDP endpoint: ${options.cdpEndpoint}`
+  ];
+
+  if (options.startUrl) {
+    lines.push(`Start URL: ${options.startUrl}`);
+  }
+
+  lines.push(`Tools: ${meta.toolCount} browser_* tools`);
+
+  if (options.transport === "stdio") {
+    lines.push("MCP stdio: enabled");
+  } else {
+    lines.push(`HTTP server: http://${options.host}:${options.port}`);
+    if (options.transport === "sse" || options.transport === "all") {
+      lines.push(`SSE endpoint: http://${options.host}:${options.port}/sse`);
+    }
+    if (options.transport === "mcp" || options.transport === "all") {
+      lines.push(`MCP endpoint: http://${options.host}:${options.port}/mcp`);
+    }
+  }
+
+  lines.push("Use -h or --help for options.");
+  return lines;
 }
 
 function readValue(argv: string[], index: number, flag: string): string {

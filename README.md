@@ -21,6 +21,7 @@ The CLI supports short aliases for the common options:
 - `-H, --host`
 - `-p, --port`
 - `-s, --start-url`
+- `-v, --version`
 
 ## Why PandaMCP
 
@@ -59,6 +60,12 @@ After the package is published to npm, run it without a local checkout:
 
 ```bash
 npx pandamcp -t stdio -u http://127.0.0.1:9222
+```
+
+Check the installed package version:
+
+```bash
+npx pandamcp@latest -v
 ```
 
 For MCP clients that spawn stdio servers, configure `npx` as the command:

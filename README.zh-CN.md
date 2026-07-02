@@ -21,6 +21,7 @@ CLI 支持常用选项的短参数：
 - `-H, --host`
 - `-p, --port`
 - `-s, --start-url`
+- `-v, --version`
 
 ## 解决的问题
 
@@ -59,6 +60,12 @@ npm run build
 
 ```bash
 npx pandamcp -t stdio -u http://127.0.0.1:9222
+```
+
+查看当前包版本：
+
+```bash
+npx pandamcp@latest -v
 ```
 
 如果 MCP 客户端通过 stdio 启动 server，可以把 `npx` 配成 command：
