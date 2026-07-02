@@ -10,6 +10,18 @@ PandaMCP 是一个本地 MCP 服务，用来把 CDP 兼容浏览器暴露给 MCP
 
 默认后端是 raw browser-level CDP，不强制依赖 Playwright。需要时也可以通过 `--backend playwright` 切换到 Playwright 的 `chromium.connectOverCDP` 后端。
 
+## 短参数
+
+CLI 支持常用选项的短参数：
+
+- `-t, --transport`
+- `-b, --backend`
+- `-u, --url`
+- `-w, --ws`
+- `-H, --host`
+- `-p, --port`
+- `-s, --start-url`
+
 ## 解决的问题
 
 PandaMCP 主要是为了解决通用 MCP 浏览器工具和 [Lightpanda](https://lightpanda.io/docs/) 这类 CDP endpoint 之间的兼容断层。
@@ -46,7 +58,7 @@ npm run build
 发布到 npm 后，可以不克隆仓库直接运行：
 
 ```bash
-npx pandamcp --transport stdio -u http://127.0.0.1:9222
+npx pandamcp -t stdio -u http://127.0.0.1:9222
 ```
 
 如果 MCP 客户端通过 stdio 启动 server，可以把 `npx` 配成 command：
@@ -59,7 +71,7 @@ npx pandamcp --transport stdio -u http://127.0.0.1:9222
       "args": [
         "-y",
         "pandamcp",
-        "--transport",
+        "-t",
         "stdio",
         "-u",
         "http://127.0.0.1:9222"
@@ -72,7 +84,7 @@ npx pandamcp --transport stdio -u http://127.0.0.1:9222
 HTTP transport 可以这样启动：
 
 ```bash
-npx pandamcp --transport all --port 3333 -u http://127.0.0.1:9222
+npx pandamcp -t all -p 3333 -u http://127.0.0.1:9222
 ```
 
 ## 发布到 npm
@@ -104,31 +116,31 @@ npm publish
 通过 CDP HTTP endpoint 连接：
 
 ```bash
-pandamcp --transport sse --port 3333 -u http://127.0.0.1:9222
+pandamcp -t sse -p 3333 -u http://127.0.0.1:9222
 ```
 
 通过 CDP WebSocket endpoint 直连：
 
 ```bash
-pandamcp --transport mcp --port 3333 -w ws://127.0.0.1:9222/
+pandamcp -t mcp -p 3333 -w ws://127.0.0.1:9222/
 ```
 
 使用 stdio：
 
 ```bash
-pandamcp --transport stdio -u http://127.0.0.1:9222
+pandamcp -t stdio -u http://127.0.0.1:9222
 ```
 
 在同一个进程里同时暴露 stdio、SSE 和 Streamable HTTP：
 
 ```bash
-pandamcp --transport all --port 3333 -u http://127.0.0.1:9222
+pandamcp -t all -p 3333 -u http://127.0.0.1:9222
 ```
 
 改用 Playwright 后端：
 
 ```bash
-pandamcp --transport mcp --backend playwright -u http://127.0.0.1:9222
+pandamcp -t mcp -b playwright -u http://127.0.0.1:9222
 ```
 
 ## HTTP 端点
@@ -218,7 +230,7 @@ stdio 客户端可以使用下面的 MCP server 配置：
       "command": "node",
       "args": [
         "<path-to-pandamcp>/dist/cli.js",
-        "--transport",
+        "-t",
         "stdio",
         "-u",
         "http://127.0.0.1:9222"
@@ -231,7 +243,7 @@ stdio 客户端可以使用下面的 MCP server 配置：
 SSE 和 Streamable HTTP 可以手动启动服务：
 
 ```bash
-node <path-to-pandamcp>/dist/cli.js --transport all --port 3333 -u http://127.0.0.1:9222
+node <path-to-pandamcp>/dist/cli.js -t all -p 3333 -u http://127.0.0.1:9222
 ```
 
 检查 Streamable HTTP endpoint：
@@ -258,7 +270,7 @@ data: /messages?sessionId=...
 也可以用 MCP Inspector 检查 stdio 服务：
 
 ```bash
-npx @modelcontextprotocol/inspector node <path-to-pandamcp>/dist/cli.js --transport stdio -u http://127.0.0.1:9222
+npx @modelcontextprotocol/inspector node <path-to-pandamcp>/dist/cli.js -t stdio -u http://127.0.0.1:9222
 ```
 
 工具列表中应包含 `browser_navigate`、`browser_title`、`browser_text` 以及其他 `browser_*` 工具。

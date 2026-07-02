@@ -1,7 +1,7 @@
 {
   "name": "pandamcp",
   "version": "0.1.0",
-  "description": "MCP server for CDP-compatible browsers with stdio, SSE, and Streamable HTTP transports.",
+  "description": "MCP bridge for Lightpanda/CDP browsers with stdio, SSE, and Streamable HTTP transports.",
   "type": "module",
   "license": "MIT",
   "homepage": "https://github.com/Freakboy/pandamcp#readme",

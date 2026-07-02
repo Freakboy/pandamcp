@@ -25,19 +25,19 @@ export function parseCliOptions(argv: string[]): CliOptions {
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
 
-    if (arg === "--transport") {
+    if (arg === "-t" || arg === "--transport") {
       options.transport = readEnum(argv, (index += 1), "--transport", transports);
-    } else if (arg === "--backend") {
+    } else if (arg === "-b" || arg === "--backend") {
       options.backend = readEnum(argv, (index += 1), "--backend", backends);
-    } else if (arg === "--port") {
+    } else if (arg === "-p" || arg === "--port") {
       options.port = readPort(argv, (index += 1));
-    } else if (arg === "--host") {
+    } else if (arg === "-H" || arg === "--host") {
       options.host = readValue(argv, (index += 1), "--host");
     } else if (arg === "-u" || arg === "--url" || arg === "--cdp-endpoint") {
       options.cdpEndpoint = readValue(argv, (index += 1), arg);
     } else if (arg === "-w" || arg === "--ws") {
       options.cdpEndpoint = readValue(argv, (index += 1), arg);
-    } else if (arg === "--start-url") {
+    } else if (arg === "-s" || arg === "--start-url") {
       options.startUrl = readValue(argv, (index += 1), "--start-url");
     } else if (arg === "-h" || arg === "--help") {
       throw new Error(helpText());
@@ -51,16 +51,16 @@ export function parseCliOptions(argv: string[]): CliOptions {
 
 export function helpText(): string {
   return [
-    "Usage: pandamcp [--transport stdio|sse|mcp|all] [-u http://127.0.0.1:9222] [-w ws://127.0.0.1:9222/]",
+    "Usage: pandamcp [-t stdio|sse|mcp|all] [-u http://127.0.0.1:9222] [-w ws://127.0.0.1:9222/]",
     "",
     "Options:",
-    "  --transport <mode>   MCP transport: stdio, sse, mcp, or all. Default: stdio",
-    "  --backend <mode>     Browser backend: raw-cdp, playwright, or auto. Default: raw-cdp",
-    "  -u, --url <url>      CDP HTTP endpoint. Default: http://127.0.0.1:9222",
-    "  -w, --ws <url>       CDP WebSocket endpoint.",
-    "  --host <host>        HTTP bind host. Default: 127.0.0.1",
-    "  --port <port>        HTTP bind port. Default: 3333",
-    "  --start-url <url>    Optional page to open during startup."
+    "  -t, --transport <mode>   MCP transport: stdio, sse, mcp, or all. Default: stdio",
+    "  -b, --backend <mode>     Browser backend: raw-cdp, playwright, or auto. Default: raw-cdp",
+    "  -u, --url <url>          CDP HTTP endpoint. Default: http://127.0.0.1:9222",
+    "  -w, --ws <url>           CDP WebSocket endpoint.",
+    "  -H, --host <host>        HTTP bind host. Default: 127.0.0.1",
+    "  -p, --port <port>        HTTP bind port. Default: 3333",
+    "  -s, --start-url <url>    Optional page to open during startup."
   ].join("\n");
 }
 

@@ -10,6 +10,18 @@ PandaMCP is a local MCP server for CDP-compatible browsers. It exposes one unifi
 
 The default backend is raw browser-level CDP. Playwright is available as an optional backend with the same tool surface.
 
+## Short Options
+
+The CLI supports short aliases for the common options:
+
+- `-t, --transport`
+- `-b, --backend`
+- `-u, --url`
+- `-w, --ws`
+- `-H, --host`
+- `-p, --port`
+- `-s, --start-url`
+
 ## Why PandaMCP
 
 PandaMCP was created for the gap between generic MCP browser tools and [Lightpanda](https://lightpanda.io/docs/)-style CDP endpoints.
@@ -46,7 +58,7 @@ npm run build
 After the package is published to npm, run it without a local checkout:
 
 ```bash
-npx pandamcp --transport stdio -u http://127.0.0.1:9222
+npx pandamcp -t stdio -u http://127.0.0.1:9222
 ```
 
 For MCP clients that spawn stdio servers, configure `npx` as the command:
@@ -59,7 +71,7 @@ For MCP clients that spawn stdio servers, configure `npx` as the command:
       "args": [
         "-y",
         "pandamcp",
-        "--transport",
+        "-t",
         "stdio",
         "-u",
         "http://127.0.0.1:9222"
@@ -72,7 +84,7 @@ For MCP clients that spawn stdio servers, configure `npx` as the command:
 For HTTP transports:
 
 ```bash
-npx pandamcp --transport all --port 3333 -u http://127.0.0.1:9222
+npx pandamcp -t all -p 3333 -u http://127.0.0.1:9222
 ```
 
 ## Publish to npm
@@ -104,31 +116,31 @@ npm publish
 Connect through a CDP HTTP endpoint:
 
 ```bash
-pandamcp --transport sse --port 3333 -u http://127.0.0.1:9222
+pandamcp -t sse -p 3333 -u http://127.0.0.1:9222
 ```
 
 Connect through a direct CDP WebSocket endpoint:
 
 ```bash
-pandamcp --transport mcp --port 3333 -w ws://127.0.0.1:9222/
+pandamcp -t mcp -p 3333 -w ws://127.0.0.1:9222/
 ```
 
 Run over stdio:
 
 ```bash
-pandamcp --transport stdio -u http://127.0.0.1:9222
+pandamcp -t stdio -u http://127.0.0.1:9222
 ```
 
 Expose stdio, SSE, and Streamable HTTP in one process:
 
 ```bash
-pandamcp --transport all --port 3333 -u http://127.0.0.1:9222
+pandamcp -t all -p 3333 -u http://127.0.0.1:9222
 ```
 
 Use Playwright's `chromium.connectOverCDP` backend instead of raw CDP:
 
 ```bash
-pandamcp --transport mcp --backend playwright -u http://127.0.0.1:9222
+pandamcp -t mcp -b playwright -u http://127.0.0.1:9222
 ```
 
 ## HTTP Endpoints
@@ -218,7 +230,7 @@ For stdio clients, use this MCP server config:
       "command": "node",
       "args": [
         "<path-to-pandamcp>/dist/cli.js",
-        "--transport",
+        "-t",
         "stdio",
         "-u",
         "http://127.0.0.1:9222"
@@ -231,7 +243,7 @@ For stdio clients, use this MCP server config:
 For SSE and Streamable HTTP, start the server manually:
 
 ```bash
-node <path-to-pandamcp>/dist/cli.js --transport all --port 3333 -u http://127.0.0.1:9222
+node <path-to-pandamcp>/dist/cli.js -t all -p 3333 -u http://127.0.0.1:9222
 ```
 
 Check the Streamable HTTP endpoint:
@@ -258,7 +270,7 @@ data: /messages?sessionId=...
 You can also inspect the stdio server with MCP Inspector:
 
 ```bash
-npx @modelcontextprotocol/inspector node <path-to-pandamcp>/dist/cli.js --transport stdio -u http://127.0.0.1:9222
+npx @modelcontextprotocol/inspector node <path-to-pandamcp>/dist/cli.js -t stdio -u http://127.0.0.1:9222
 ```
 
 The tool list should include `browser_navigate`, `browser_title`, `browser_text`, and the other `browser_*` tools.
