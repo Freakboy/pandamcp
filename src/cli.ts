@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-import { readFile } from "node:fs/promises";
 import type http from "node:http";
 
 import { createBrowserService } from "./browser/factory.js";
@@ -7,10 +6,11 @@ import { formatStartupInfo, helpText, parseCliOptions } from "./cli-options.js";
 import { BROWSER_TOOL_NAMES } from "./mcp/tools.js";
 import { startHttpTransports } from "./transports/http-server.js";
 import { serveStdio } from "./transports/stdio.js";
+import { packageVersion } from "./version.js";
 
 async function main(): Promise<void> {
   const options = parseCliOptions(process.argv.slice(2));
-  const version = await packageVersion();
+  const version = packageVersion();
 
   if (options.version) {
     console.log(version);
@@ -65,10 +65,3 @@ main().catch((error: unknown) => {
   console.error(error);
   process.exit(1);
 });
-
-async function packageVersion(): Promise<string> {
-  const packageJson = JSON.parse(
-    await readFile(new URL("../package.json", import.meta.url), "utf8")
-  ) as { version?: string };
-  return packageJson.version ?? "0.0.0";
-}
