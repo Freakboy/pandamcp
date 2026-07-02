@@ -161,33 +161,67 @@ When `--transport mcp` or `--transport all` is enabled:
 | `browser_new_page` | Create a new page, optionally opening a URL immediately. |
 | `browser_list_pages` | List known pages with `pageId`, URL, and title. |
 | `browser_navigate` | Navigate an existing page, or create one when `pageId` is omitted. |
+| `browser_reload` | Reload the current page. |
+| `browser_back` | Navigate one entry back in page history. |
+| `browser_forward` | Navigate one entry forward in page history. |
+| `browser_page_info` | Read URL, title, ready state, viewport, and user agent. |
 | `browser_title` | Read the current page title. |
 | `browser_body_text` | Read the document body text directly, without requiring a selector. |
 | `browser_text` | Read `textContent` from the first element matching a CSS selector. |
 | `browser_content` | Read the current page HTML. |
 | `browser_evaluate` | Evaluate a JavaScript expression in the page. |
+| `browser_wait_for_text` | Poll the page body until it contains the requested text. |
+| `browser_wait_for_selector` | Wait for a selector to be attached or visible. |
+| `browser_wait_for_url` | Wait for exact, contains, or regex URL matching. |
+| `browser_wait_for_load_state` | Wait for `domcontentloaded`, `load`, or `networkidle`. |
+| `browser_wait_for_expression` | Poll a JavaScript expression until it returns a truthy value. |
 | `browser_click` | Click the first element matching a CSS selector. |
 | `browser_fill` | Set the value of the first element matching a CSS selector. |
 | `browser_press` | Dispatch key events for the active element. |
+| `browser_hover` | Move the mouse over the first matching selector. |
+| `browser_select_option` | Select one or more values in a `<select>` element. |
+| `browser_drag_and_drop` | Drag a source selector to a target selector. |
+| `browser_upload_file` | Set files on a file input. |
+| `browser_focus` | Focus the first matching selector. |
+| `browser_blur` | Blur the first matching selector. |
 | `browser_screenshot` | Capture a PNG screenshot as base64 data. |
-| `browser_wait_for_text` | Poll the page body until it contains the requested text. |
+| `browser_network_events` | Read recent request, response, and failure events. |
+| `browser_response_body` | Read a captured response body by `requestId`. |
+| `browser_console_events` | Read recent console messages and page errors. |
+| `browser_cookies` | Read cookies visible to the current page URL. |
+| `browser_set_cookie` | Set a cookie for the current page URL. |
+| `browser_clear_cookies` | Clear browser cookies. |
+| `browser_storage` | Read `localStorage` or `sessionStorage`. |
+| `browser_set_storage` | Set a `localStorage` or `sessionStorage` item. |
+| `browser_clear_storage` | Clear `localStorage` or `sessionStorage`. |
+| `browser_grant_permissions` | Grant browser permissions such as geolocation. |
+| `browser_reset_permissions` | Reset browser permissions. |
+| `browser_set_geolocation` | Override geolocation coordinates. |
+| `browser_list_frames` | List the page frame tree. |
+| `browser_frame_evaluate` | Evaluate JavaScript in a same-origin iframe selected by CSS selector. |
+| `browser_create_context` | Create an isolated browser context. |
+| `browser_list_contexts` | List browser contexts known to the backend. |
+| `browser_close_context` | Close an isolated browser context. |
+| `browser_print_pdf` | Print the page to a base64 PDF. |
+| `browser_set_download_behavior` | Configure browser download behavior. |
+| `browser_start_tracing` | Start browser tracing for a page. |
+| `browser_stop_tracing` | Stop tracing and return trace data. |
+| `browser_accessibility_snapshot` | Read the full accessibility tree. |
+| `browser_set_blocked_urls` | Block requests using CDP URL patterns. |
 | `browser_close_page` | Close a page by `pageId`. |
 | `browser_close_browser` | Close the backend browser connection. |
 
-## Known Gaps
+## Coverage And Limits
 
-PandaMCP currently covers the basic browser loop: create page, navigate, inspect title/body/selector text/HTML, evaluate JavaScript, interact with simple selectors, take screenshots, wait for text, and close resources.
+PandaMCP now exposes the common Chrome/Playwright browser automation surface through MCP: navigation history, page metadata, rich waits, network and console inspection, cookies and web storage, permissions and geolocation, advanced selector input, frames, isolated contexts, downloads, PDF, tracing, accessibility snapshots, and URL blocking.
 
-Common browser operations that are not directly exposed yet:
+The remaining limits are mostly browser-backend dependent:
 
-- Page history: reload, back, and forward.
-- Current page metadata beyond title: URL, ready state, viewport, user agent.
-- Rich waits: wait for selector, URL, load state, network idle, or arbitrary JavaScript condition.
-- Network and console inspection: request list, response bodies, console messages, errors.
-- Browser state: cookies, localStorage/sessionStorage, permissions, geolocation.
-- Advanced input: hover, select option, drag and drop, file upload, focus/blur.
-- Frames and multiple contexts: iframe selection, isolated contexts, incognito-style sessions.
-- Downloads, PDFs, tracing, accessibility snapshots, and request interception.
+- Lightpanda and other CDP-compatible browsers may not implement every Chrome CDP domain used by the full tool surface.
+- `browser_frame_evaluate` is intentionally same-origin when selecting an iframe by CSS selector.
+- Drag and drop uses browser events and works for normal web drop handlers, but native/OS-level drag targets can still require browser-specific support.
+- `browser_set_blocked_urls` covers practical request blocking with CDP URL patterns; full request mutation/fulfillment interception is not exposed yet.
+- Download behavior, PDF, tracing, and accessibility snapshots depend on the underlying browser supporting the corresponding CDP domain.
 
 ## Validation
 

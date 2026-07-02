@@ -1,3 +1,7 @@
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
 import { describe, expect, test } from "vitest";
 
 import { RawCdpBackend } from "../src/browser/raw-cdp-backend.js";
@@ -55,7 +59,11 @@ describe("RawCdpBackend", () => {
       "Target.attachToTarget",
       "Page.enable",
       "Runtime.enable",
+      "Network.enable",
+      "DOM.enable",
+      "Log.enable",
       "Page.navigate",
+      "Runtime.evaluate",
       "Runtime.evaluate"
     ]);
     expect(socket.sent.find(isPageNavigate)).toMatchObject({
@@ -88,6 +96,69 @@ describe("RawCdpBackend", () => {
     expect(runtimeCalls[0].params.expression).toBe("document.title");
     expect(runtimeCalls[1].params.expression).toContain("document.querySelector");
   });
+
+  test("creates URL pages directly through Target.createTarget", async () => {
+    const socket = new FakeSocket();
+    const backend = new RawCdpBackend({
+      endpoint: "ws://127.0.0.1:9222/",
+      connectSocket: async () => socket
+    });
+
+    await backend.connect();
+    await backend.newPage("https://example.com");
+
+    expect(socket.sent[0]).toMatchObject({
+      method: "Target.createTarget",
+      params: { url: "https://example.com" }
+    });
+    expect(methods(socket.sent)).not.toContain("Page.navigate");
+  });
+
+  test("reads web storage through the Storage key API", async () => {
+    const socket = new FakeSocket();
+    const backend = new RawCdpBackend({
+      endpoint: "ws://127.0.0.1:9222/",
+      connectSocket: async () => socket
+    });
+
+    await backend.connect();
+    const page = await backend.newPage();
+
+    await expect(backend.storage(page.pageId, "localStorage")).resolves.toEqual([
+      { key: "pandamcp", value: "ok" }
+    ]);
+  });
+
+  test("falls back to in-page file assignment when native CDP upload does not populate files", async () => {
+    const socket = new FakeSocket();
+    const backend = new RawCdpBackend({
+      endpoint: "ws://127.0.0.1:9222/",
+      connectSocket: async () => socket
+    });
+    const dir = await mkdtemp(join(tmpdir(), "pandamcp-test-"));
+    const filePath = join(dir, "upload.txt");
+
+    await writeFile(filePath, "hello");
+    await backend.connect();
+    const page = await backend.newPage();
+    await backend.uploadFile(page.pageId, "input[type=file]", [filePath]);
+    await rm(dir, { recursive: true, force: true });
+
+    expect(methods(socket.sent)).toContain("DOM.setFileInputFiles");
+    const fallbackCall = socket.sent.find(
+      (message): message is { method: string; params: { expression: string } } =>
+        typeof message === "object" &&
+        message !== null &&
+        "method" in message &&
+        message.method === "Runtime.evaluate" &&
+        "params" in message &&
+        typeof message.params === "object" &&
+        message.params !== null &&
+        "expression" in message.params &&
+        String(message.params.expression).includes("Object.defineProperty(element, \"files\"")
+    );
+    expect(fallbackCall?.params.expression).toContain("upload.txt");
+  });
 });
 
 function methods(messages: unknown[]): string[] {
@@ -111,7 +182,34 @@ function responseFor(message: { method: string; params?: { expression?: string }
   if (method === "Target.attachToTarget") {
     return { sessionId: "SID-1" };
   }
+  if (method === "DOM.getDocument") {
+    return { root: { nodeId: 1 } };
+  }
+  if (method === "DOM.querySelector") {
+    return { nodeId: 2 };
+  }
   if (method === "Runtime.evaluate") {
+    if (message.params?.expression?.includes("element.files.length")) {
+      return {
+        result: {
+          value: 0
+        }
+      };
+    }
+    if (message.params?.expression?.includes("Object.defineProperty")) {
+      return {
+        result: {
+          value: true
+        }
+      };
+    }
+    if (message.params?.expression?.includes(".key(index)")) {
+      return {
+        result: {
+          value: [{ key: "pandamcp", value: "ok" }]
+        }
+      };
+    }
     return {
       result: {
         value: message.params?.expression === "document.title" ? "Example" : "Hello"

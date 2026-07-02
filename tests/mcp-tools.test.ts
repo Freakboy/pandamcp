@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+
 import { describe, expect, test, vi } from "vitest";
 
 import { BROWSER_TOOL_NAMES, registerBrowserTools } from "../src/mcp/tools.js";
@@ -15,22 +17,19 @@ describe("registerBrowserTools", () => {
     registerBrowserTools(server, {} as BrowserService);
 
     expect(registered).toEqual(BROWSER_TOOL_NAMES);
-    expect(registered).toEqual([
-      "browser_new_page",
-      "browser_list_pages",
-      "browser_navigate",
-      "browser_title",
-      "browser_body_text",
-      "browser_text",
-      "browser_content",
-      "browser_evaluate",
-      "browser_click",
-      "browser_fill",
-      "browser_press",
-      "browser_screenshot",
-      "browser_wait_for_text",
-      "browser_close_page",
-      "browser_close_browser"
-    ]);
+    expect(registered).toHaveLength(52);
+    expect(registered).toContain("browser_page_info");
+    expect(registered).toContain("browser_network_events");
+    expect(registered).toContain("browser_accessibility_snapshot");
+  });
+
+  test("keeps README tool tables aligned with the registered tool surface", () => {
+    expect(readToolNamesFromReadme("../README.md")).toEqual(BROWSER_TOOL_NAMES);
+    expect(readToolNamesFromReadme("../README.zh-CN.md")).toEqual(BROWSER_TOOL_NAMES);
   });
 });
+
+function readToolNamesFromReadme(path: string): string[] {
+  const readme = readFileSync(new URL(path, import.meta.url), "utf8");
+  return [...readme.matchAll(/^\| `(browser_[^`]+)` \|/gm)].map((match) => match[1]);
+}

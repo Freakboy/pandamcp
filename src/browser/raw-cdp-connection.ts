@@ -14,6 +14,8 @@ export interface CdpMessage {
   sessionId?: string;
 }
 
+export type CdpEventListener = (message: CdpMessage) => void;
+
 export interface CdpConnectionOptions {
   endpoint: string;
   connectSocket?: (webSocketUrl: string) => Promise<CdpSocket>;
@@ -27,6 +29,7 @@ export class CdpConnection {
     number,
     { resolve: (value: unknown) => void; reject: (error: Error) => void; timer: NodeJS.Timeout }
   >();
+  private readonly eventListeners = new Set<CdpEventListener>();
 
   constructor(private readonly options: CdpConnectionOptions) {}
 
@@ -84,9 +87,37 @@ export class CdpConnection {
     this.pending.clear();
   }
 
+  onEvent(listener: CdpEventListener): () => void {
+    this.eventListeners.add(listener);
+    return () => this.eventListeners.delete(listener);
+  }
+
+  waitForEvent(
+    predicate: (message: CdpMessage) => boolean,
+    timeoutMs = 10_000
+  ): Promise<CdpMessage> {
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        unsubscribe();
+        reject(new Error("Timed out waiting for CDP event"));
+      }, timeoutMs);
+      const unsubscribe = this.onEvent((message) => {
+        if (!predicate(message)) {
+          return;
+        }
+        clearTimeout(timer);
+        unsubscribe();
+        resolve(message);
+      });
+    });
+  }
+
   private readonly handleMessage = (event: { data: string }): void => {
     const message = JSON.parse(event.data) as CdpMessage;
     if (!message.id) {
+      for (const listener of this.eventListeners) {
+        listener(message);
+      }
       return;
     }
 
