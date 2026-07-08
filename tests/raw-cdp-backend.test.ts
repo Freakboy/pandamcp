@@ -11,6 +11,8 @@ class FakeSocket implements CdpSocket {
   readonly sent: unknown[] = [];
   private readonly listeners = new Map<string, Set<(event: { data: string }) => void>>();
 
+  constructor(private readonly responder: typeof responseFor = responseFor) {}
+
   addEventListener(event: string, listener: (event: { data: string }) => void): void {
     const listeners = this.listeners.get(event) ?? new Set();
     listeners.add(listener);
@@ -29,8 +31,16 @@ class FakeSocket implements CdpSocket {
 
   close(): void {}
 
+  emitEvent(message: unknown): void {
+    this.emit(message);
+  }
+
   private respond(message: { id: number; method: string }): void {
-    const result = responseFor(message);
+    const result = this.responder(message);
+    if (result instanceof Error) {
+      this.emit({ id: message.id, error: { message: result.message }, sessionId: "SID-1" });
+      return;
+    }
     this.emit({ id: message.id, result, sessionId: "SID-1" });
   }
 
@@ -114,6 +124,102 @@ describe("RawCdpBackend", () => {
     expect(methods(socket.sent)).not.toContain("Page.navigate");
   });
 
+  test("reuses an existing target when creating a target reports TargetAlreadyLoaded", async () => {
+    const socket = new FakeSocket((message) => {
+      if (message.method === "Target.createTarget") {
+        return new Error("TargetAlreadyLoaded");
+      }
+      return responseFor(message);
+    });
+    const backend = new RawCdpBackend({
+      endpoint: "ws://127.0.0.1:9222/",
+      connectSocket: async () => socket
+    });
+
+    await backend.connect();
+    const page = await backend.newPage("https://example.com");
+
+    expect(page).toMatchObject({
+      pageId: "TARGET-1",
+      url: "https://example.com"
+    });
+    expect(methods(socket.sent)).toEqual([
+      "Target.createTarget",
+      "Target.getTargets",
+      "Target.attachToTarget",
+      "Page.enable",
+      "Runtime.enable",
+      "Network.enable",
+      "DOM.enable",
+      "Log.enable",
+      "Page.navigate",
+      "Runtime.evaluate",
+      "Runtime.evaluate"
+    ]);
+  });
+
+  test("waits for the page load event before resolving navigation", async () => {
+    const socket = new FakeSocket((message) => {
+      if (
+        message.method === "Runtime.evaluate" &&
+        message.params?.expression === "document.readyState === \"complete\""
+      ) {
+        return { result: { value: false } };
+      }
+      return responseFor(message);
+    });
+    const backend = new RawCdpBackend({
+      endpoint: "ws://127.0.0.1:9222/",
+      connectSocket: async () => socket
+    });
+
+    await backend.connect();
+    const page = await backend.newPage();
+    const navigation = backend.navigate(page.pageId, "https://example.com");
+    let settled = false;
+    void navigation.then(() => {
+      settled = true;
+    });
+
+    await flushAsyncWork();
+    expect(settled).toBe(false);
+
+    socket.emitEvent({
+      method: "Page.loadEventFired",
+      params: { timestamp: 1 },
+      sessionId: "SID-1"
+    });
+
+    await expect(navigation).resolves.toMatchObject({
+      pageId: "TARGET-1",
+      url: "https://example.com"
+    });
+  });
+
+  test("accepts already-complete documents when the load event was missed", async () => {
+    const socket = new FakeSocket((message) => {
+      if (
+        message.method === "Runtime.evaluate" &&
+        message.params?.expression === "document.readyState === \"complete\""
+      ) {
+        return { result: { value: true } };
+      }
+      return responseFor(message);
+    });
+    const backend = new RawCdpBackend({
+      endpoint: "ws://127.0.0.1:9222/",
+      connectSocket: async () => socket
+    });
+
+    await backend.connect();
+    const page = await backend.newPage();
+
+    await expect(backend.navigate(page.pageId, "https://example.com")).resolves.toMatchObject({
+      pageId: "TARGET-1",
+      url: "https://example.com"
+    });
+  });
+
   test("reads web storage through the Storage key API", async () => {
     const socket = new FakeSocket();
     const backend = new RawCdpBackend({
@@ -174,6 +280,12 @@ function isPageNavigate(message: unknown): boolean {
   );
 }
 
+async function flushAsyncWork(): Promise<void> {
+  for (let index = 0; index < 5; index += 1) {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  }
+}
+
 function responseFor(message: { method: string; params?: { expression?: string } }): unknown {
   const method = message.method;
   if (method === "Target.createTarget") {
@@ -182,6 +294,18 @@ function responseFor(message: { method: string; params?: { expression?: string }
   if (method === "Target.attachToTarget") {
     return { sessionId: "SID-1" };
   }
+  if (method === "Target.getTargets") {
+    return {
+      targetInfos: [
+        {
+          targetId: "TARGET-1",
+          type: "page",
+          url: "about:blank",
+          title: ""
+        }
+      ]
+    };
+  }
   if (method === "DOM.getDocument") {
     return { root: { nodeId: 1 } };
   }
@@ -189,6 +313,13 @@ function responseFor(message: { method: string; params?: { expression?: string }
     return { nodeId: 2 };
   }
   if (method === "Runtime.evaluate") {
+    if (message.params?.expression === "document.readyState === \"complete\"") {
+      return {
+        result: {
+          value: true
+        }
+      };
+    }
     if (message.params?.expression?.includes("element.files.length")) {
       return {
         result: {

@@ -38,28 +38,35 @@ import type {
 } from "./types.js";
 
 export class BrowserService {
+  private connected = false;
+
   constructor(private readonly backend: BrowserBackend) {}
 
-  connect(): Promise<void> {
-    return this.backend.connect();
+  async connect(): Promise<void> {
+    await this.backend.connect();
+    this.connected = true;
   }
 
-  close(): Promise<void> {
-    return this.backend.close();
+  async close(): Promise<void> {
+    await this.backend.close();
+    this.connected = false;
   }
 
-  newPage(input?: string | NewPageInput): Promise<BrowserPage> {
+  async newPage(input?: string | NewPageInput): Promise<BrowserPage> {
+    await this.ensureConnected();
     if (typeof input === "string" || !input) {
       return this.backend.newPage(input);
     }
     return this.backend.newPage(input.url, input.contextId);
   }
 
-  listPages(): Promise<BrowserPage[]> {
+  async listPages(): Promise<BrowserPage[]> {
+    await this.ensureConnected();
     return this.backend.listPages();
   }
 
   async navigate(input: NavigateInput): Promise<BrowserPage> {
+    await this.ensureConnected();
     if (!input.pageId) {
       return this.backend.newPage(input.url);
     }
@@ -68,32 +75,39 @@ export class BrowserService {
   }
 
   async reload(pageId: string): Promise<BrowserPage> {
+    await this.ensureConnected();
     return this.backend.reload(pageId);
   }
 
   async back(pageId: string): Promise<BrowserPage> {
+    await this.ensureConnected();
     return this.backend.goBack(pageId);
   }
 
   async forward(pageId: string): Promise<BrowserPage> {
+    await this.ensureConnected();
     return this.backend.goForward(pageId);
   }
 
   async pageInfo(pageId: string): Promise<PageInfo> {
+    await this.ensureConnected();
     return this.backend.pageInfo(pageId);
   }
 
   async title(pageId: string): Promise<{ pageId: string; title: string }> {
+    await this.ensureConnected();
     return { pageId, title: await this.backend.title(pageId) };
   }
 
   async bodyText(pageId: string): Promise<{ pageId: string; text: string | null }> {
+    await this.ensureConnected();
     return { pageId, text: await this.backend.textContent(pageId, "body") };
   }
 
   async textContent(
     input: PageSelectorInput
   ): Promise<{ pageId: string; selector: string; text: string | null }> {
+    await this.ensureConnected();
     return {
       pageId: input.pageId,
       selector: input.selector,
@@ -102,10 +116,12 @@ export class BrowserService {
   }
 
   async content(pageId: string): Promise<{ pageId: string; html: string }> {
+    await this.ensureConnected();
     return { pageId, html: await this.backend.content(pageId) };
   }
 
   async evaluate(input: EvaluateInput): Promise<{ pageId: string; result: unknown }> {
+    await this.ensureConnected();
     return {
       pageId: input.pageId,
       result: await this.backend.evaluate(input.pageId, input.expression)
@@ -115,6 +131,7 @@ export class BrowserService {
   async waitForSelector(
     input: WaitForSelectorInput
   ): Promise<{ pageId: string; selector: string; visible: boolean; found: true }> {
+    await this.ensureConnected();
     await this.backend.waitForSelector(input.pageId, input.selector, {
       visible: input.visible,
       timeoutMs: input.timeoutMs,
@@ -129,6 +146,7 @@ export class BrowserService {
   }
 
   async waitForUrl(input: WaitForUrlInput): Promise<{ pageId: string; url: string; matched: true }> {
+    await this.ensureConnected();
     const url = await this.backend.waitForUrl(
       input.pageId,
       { exact: input.exact, contains: input.contains, regex: input.regex },
@@ -140,11 +158,13 @@ export class BrowserService {
   async waitForLoadState(
     input: WaitForLoadStateInput
   ): Promise<{ pageId: string; state: LoadState; reached: true }> {
+    await this.ensureConnected();
     await this.backend.waitForLoadState(input.pageId, input.state, input.timeoutMs);
     return { pageId: input.pageId, state: input.state, reached: true };
   }
 
   async waitForExpression(input: WaitForExpressionInput): Promise<{ pageId: string; result: unknown }> {
+    await this.ensureConnected();
     return {
       pageId: input.pageId,
       result: await this.backend.waitForExpression(
@@ -157,21 +177,25 @@ export class BrowserService {
   }
 
   async click(input: PageSelectorInput): Promise<{ pageId: string; selector: string; clicked: true }> {
+    await this.ensureConnected();
     await this.backend.click(input.pageId, input.selector);
     return { pageId: input.pageId, selector: input.selector, clicked: true };
   }
 
   async fill(input: FillInput): Promise<{ pageId: string; selector: string; filled: true }> {
+    await this.ensureConnected();
     await this.backend.fill(input.pageId, input.selector, input.value);
     return { pageId: input.pageId, selector: input.selector, filled: true };
   }
 
   async press(input: PressInput): Promise<{ pageId: string; key: string; pressed: true }> {
+    await this.ensureConnected();
     await this.backend.press(input.pageId, input.key);
     return { pageId: input.pageId, key: input.key, pressed: true };
   }
 
   async hover(input: PageSelectorInput): Promise<{ pageId: string; selector: string; hovered: true }> {
+    await this.ensureConnected();
     await this.backend.hover(input.pageId, input.selector);
     return { pageId: input.pageId, selector: input.selector, hovered: true };
   }
@@ -179,6 +203,7 @@ export class BrowserService {
   async selectOption(
     input: SelectOptionInput
   ): Promise<{ pageId: string; selector: string; values: string[] }> {
+    await this.ensureConnected();
     return {
       pageId: input.pageId,
       selector: input.selector,
@@ -192,6 +217,7 @@ export class BrowserService {
     targetSelector: string;
     dragged: true;
   }> {
+    await this.ensureConnected();
     await this.backend.dragAndDrop(input.pageId, input.sourceSelector, input.targetSelector);
     return {
       pageId: input.pageId,
@@ -207,16 +233,19 @@ export class BrowserService {
     paths: string[];
     uploaded: true;
   }> {
+    await this.ensureConnected();
     await this.backend.uploadFile(input.pageId, input.selector, input.paths);
     return { pageId: input.pageId, selector: input.selector, paths: input.paths, uploaded: true };
   }
 
   async focus(input: PageSelectorInput): Promise<{ pageId: string; selector: string; focused: true }> {
+    await this.ensureConnected();
     await this.backend.focus(input.pageId, input.selector);
     return { pageId: input.pageId, selector: input.selector, focused: true };
   }
 
   async blur(input: PageSelectorInput): Promise<{ pageId: string; selector: string; blurred: true }> {
+    await this.ensureConnected();
     await this.backend.blur(input.pageId, input.selector);
     return { pageId: input.pageId, selector: input.selector, blurred: true };
   }
@@ -224,6 +253,7 @@ export class BrowserService {
   async screenshot(
     input: ScreenshotInput
   ): Promise<{ pageId: string; data: string; mimeType: string }> {
+    await this.ensureConnected();
     const screenshot = await this.backend.screenshot(input.pageId, input.fullPage);
     return { pageId: input.pageId, ...screenshot };
   }
@@ -231,6 +261,7 @@ export class BrowserService {
   async waitForText(
     input: WaitForTextInput
   ): Promise<{ pageId: string; text: string; found: true }> {
+    await this.ensureConnected();
     const timeoutMs = input.timeoutMs ?? 5_000;
     const pollMs = input.pollMs ?? 100;
     const deadline = Date.now() + timeoutMs;
@@ -247,6 +278,7 @@ export class BrowserService {
   }
 
   async networkEvents(input: LimitInput): Promise<{ pageId: string; events: NetworkEvent[] }> {
+    await this.ensureConnected();
     return {
       pageId: input.pageId,
       events: await this.backend.networkEvents(input.pageId, input.limit)
@@ -256,11 +288,13 @@ export class BrowserService {
   async responseBody(
     input: ResponseBodyInput
   ): Promise<{ pageId: string; requestId: string; body: string; base64Encoded: boolean }> {
+    await this.ensureConnected();
     const result = await this.backend.responseBody(input.pageId, input.requestId);
     return { pageId: input.pageId, requestId: input.requestId, ...result };
   }
 
   async consoleEvents(input: LimitInput): Promise<{ pageId: string; events: ConsoleEvent[] }> {
+    await this.ensureConnected();
     return {
       pageId: input.pageId,
       events: await this.backend.consoleEvents(input.pageId, input.limit)
@@ -268,20 +302,24 @@ export class BrowserService {
   }
 
   async cookies(pageId: string): Promise<{ pageId: string; cookies: BrowserCookie[] }> {
+    await this.ensureConnected();
     return { pageId, cookies: await this.backend.cookies(pageId) };
   }
 
   async setCookie(input: SetCookieInput): Promise<{ pageId: string; cookie: BrowserCookie; set: true }> {
+    await this.ensureConnected();
     await this.backend.setCookie(input.pageId, input.cookie);
     return { pageId: input.pageId, cookie: input.cookie, set: true };
   }
 
   async clearCookies(pageId: string): Promise<{ pageId: string; cleared: true }> {
+    await this.ensureConnected();
     await this.backend.clearCookies(pageId);
     return { pageId, cleared: true };
   }
 
   async storage(input: StorageInput): Promise<{ pageId: string; type: string; entries: StorageEntry[] }> {
+    await this.ensureConnected();
     return {
       pageId: input.pageId,
       type: input.type,
@@ -295,11 +333,13 @@ export class BrowserService {
     key: string;
     set: true;
   }> {
+    await this.ensureConnected();
     await this.backend.setStorage(input.pageId, input.type, input.key, input.value);
     return { pageId: input.pageId, type: input.type, key: input.key, set: true };
   }
 
   async clearStorage(input: StorageInput): Promise<{ pageId: string; type: string; cleared: true }> {
+    await this.ensureConnected();
     await this.backend.clearStorage(input.pageId, input.type);
     return { pageId: input.pageId, type: input.type, cleared: true };
   }
@@ -309,11 +349,13 @@ export class BrowserService {
     permissions: string[];
     granted: true;
   }> {
+    await this.ensureConnected();
     await this.backend.grantPermissions(input.pageId, input.permissions);
     return { pageId: input.pageId, permissions: input.permissions, granted: true };
   }
 
   async resetPermissions(pageId: string): Promise<{ pageId: string; reset: true }> {
+    await this.ensureConnected();
     await this.backend.resetPermissions(pageId);
     return { pageId, reset: true };
   }
@@ -325,6 +367,7 @@ export class BrowserService {
     accuracy: number;
     set: true;
   }> {
+    await this.ensureConnected();
     const accuracy = input.accuracy ?? 100;
     await this.backend.setGeolocation(input.pageId, input.latitude, input.longitude, accuracy);
     return {
@@ -337,10 +380,12 @@ export class BrowserService {
   }
 
   async listFrames(pageId: string): Promise<{ pageId: string; frames: FrameInfo[] }> {
+    await this.ensureConnected();
     return { pageId, frames: await this.backend.listFrames(pageId) };
   }
 
   async frameEvaluate(input: FrameEvaluateInput): Promise<{ pageId: string; result: unknown }> {
+    await this.ensureConnected();
     return {
       pageId: input.pageId,
       result: await this.backend.frameEvaluate(input.pageId, input.frameSelector, input.expression)
@@ -348,19 +393,23 @@ export class BrowserService {
   }
 
   async createContext(): Promise<BrowserContextInfo> {
+    await this.ensureConnected();
     return this.backend.createContext();
   }
 
   async listContexts(): Promise<{ contexts: BrowserContextInfo[] }> {
+    await this.ensureConnected();
     return { contexts: await this.backend.listContexts() };
   }
 
   async closeContext(contextId: string): Promise<{ contextId: string; closed: true }> {
+    await this.ensureConnected();
     await this.backend.closeContext(contextId);
     return { contextId, closed: true };
   }
 
   async printPdf(pageId: string): Promise<{ pageId: string; data: string; mimeType: "application/pdf" }> {
+    await this.ensureConnected();
     const pdf = await this.backend.printPdf(pageId);
     return { pageId, ...pdf };
   }
@@ -368,21 +417,25 @@ export class BrowserService {
   async setDownloadBehavior(
     input: DownloadBehaviorInput
   ): Promise<{ behavior: string; downloadPath?: string; set: true }> {
+    await this.ensureConnected();
     await this.backend.setDownloadBehavior(input.behavior, input.downloadPath);
     return { behavior: input.behavior, downloadPath: input.downloadPath, set: true };
   }
 
   async startTracing(pageId: string): Promise<{ pageId: string; tracing: "started" }> {
+    await this.ensureConnected();
     await this.backend.startTracing(pageId);
     return { pageId, tracing: "started" };
   }
 
   async stopTracing(pageId: string): Promise<{ pageId: string } & TraceResult> {
+    await this.ensureConnected();
     const trace = await this.backend.stopTracing(pageId);
     return { pageId, ...trace };
   }
 
   async accessibilitySnapshot(pageId: string): Promise<{ pageId: string; nodes: unknown[] }> {
+    await this.ensureConnected();
     return { pageId, nodes: await this.backend.accessibilitySnapshot(pageId) };
   }
 
@@ -391,13 +444,22 @@ export class BrowserService {
     patterns: string[];
     set: true;
   }> {
+    await this.ensureConnected();
     await this.backend.setBlockedUrls(input.pageId, input.patterns);
     return { pageId: input.pageId, patterns: input.patterns, set: true };
   }
 
   async closePage(pageId: string): Promise<{ pageId: string; closed: true }> {
+    await this.ensureConnected();
     await this.backend.closePage(pageId);
     return { pageId, closed: true };
+  }
+
+  private async ensureConnected(): Promise<void> {
+    if (this.connected) {
+      return;
+    }
+    await this.connect();
   }
 }
 

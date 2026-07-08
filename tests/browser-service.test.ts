@@ -4,11 +4,18 @@ import { BrowserService } from "../src/browser/browser-service.js";
 import type { BrowserBackend } from "../src/browser/types.js";
 
 class FakeBackend {
+  connectCount = 0;
+  closeCount = 0;
   lastTextSelector?: string;
   lastNewPageUrl?: string;
 
-  async connect() {}
-  async close() {}
+  async connect() {
+    this.connectCount += 1;
+  }
+
+  async close() {
+    this.closeCount += 1;
+  }
   async closePage() {}
 
   async newPage(url?: string) {
@@ -97,5 +104,19 @@ describe("BrowserService", () => {
       pageId: "page-1",
       result: { ok: true }
     });
+  });
+
+  test("reconnects automatically after the browser is closed", async () => {
+    const backend = new FakeBackend();
+    const service = new BrowserService(backend as unknown as BrowserBackend);
+
+    await service.connect();
+    await service.close();
+    await expect(service.listPages()).resolves.toEqual([
+      { pageId: "page-1", url: "about:blank", title: "" }
+    ]);
+
+    expect(backend.connectCount).toBe(2);
+    expect(backend.closeCount).toBe(1);
   });
 });

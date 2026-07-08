@@ -92,6 +92,7 @@ export class RawCdpBackend implements BrowserBackend {
   private tracingPageId?: string;
   private tracingFallbackStartedAt?: number;
   private unsubscribeEvents?: () => void;
+  private readonly automaticLoadTimeoutMs = 30_000;
 
   constructor(options: CdpConnectionOptions) {
     this.connection = new CdpConnection(options);
@@ -112,14 +113,14 @@ export class RawCdpBackend implements BrowserBackend {
   }
 
   async newPage(url?: string, contextId?: string): Promise<BrowserPage> {
-    const target = await this.connection.call<TargetResult>("Target.createTarget", {
-      url: url ?? "about:blank",
-      ...(contextId ? { browserContextId: contextId } : {})
-    });
-    const page = await this.attach(target.targetId, contextId);
+    const { target, reused } = await this.createTargetOrReuseExisting(url, contextId);
+    const page = await this.ensureAttached(target.targetId, target.browserContextId ?? contextId);
 
     if (url) {
-      await this.waitForLoadState(target.targetId, "domcontentloaded", 10_000).catch(() => undefined);
+      if (reused) {
+        await this.connection.call("Page.navigate", { url }, page.sessionId);
+      }
+      await this.waitForPageLoad(target.targetId);
       const info = await this.pageInfo(target.targetId);
       return { pageId: target.targetId, url: info.url || url, title: info.title, contextId: page.contextId };
     }
@@ -142,7 +143,7 @@ export class RawCdpBackend implements BrowserBackend {
   async navigate(pageId: string, url: string): Promise<BrowserPage> {
     const page = await this.ensureAttached(pageId);
     await this.connection.call("Page.navigate", { url }, page.sessionId);
-    await this.waitForLoadState(pageId, "domcontentloaded", 10_000).catch(() => undefined);
+    await this.waitForPageLoad(pageId);
     const info = await this.pageInfo(pageId);
     return { pageId, url: info.url || url, title: info.title, contextId: page.contextId };
   }
@@ -150,7 +151,7 @@ export class RawCdpBackend implements BrowserBackend {
   async reload(pageId: string): Promise<BrowserPage> {
     const page = await this.ensureAttached(pageId);
     await this.connection.call("Page.reload", {}, page.sessionId);
-    await this.waitForLoadState(pageId, "domcontentloaded", 10_000).catch(() => undefined);
+    await this.waitForPageLoad(pageId);
     return this.pageInfo(pageId);
   }
 
@@ -705,13 +706,102 @@ export class RawCdpBackend implements BrowserBackend {
   }
 
   private async ensureAttached(
-    pageId: string
+    pageId: string,
+    contextId?: string
   ): Promise<{ targetId: string; sessionId: string; contextId?: string }> {
     const existing = this.pages.get(pageId);
     if (existing) {
       return existing;
     }
-    return this.attach(pageId);
+    return this.attach(pageId, contextId);
+  }
+
+  private async waitForPageLoad(pageId: string): Promise<void> {
+    const page = await this.ensureAttached(pageId);
+    const loadEvent = this.waitForPageLoadEvent(page.sessionId, this.automaticLoadTimeoutMs);
+    try {
+      if (await this.isDocumentComplete(pageId)) {
+        return;
+      }
+      await loadEvent.promise;
+    } finally {
+      loadEvent.cancel();
+    }
+  }
+
+  private async isDocumentComplete(pageId: string): Promise<boolean> {
+    return (await this.evaluateInPage(pageId, `document.readyState === "complete"`)) === true;
+  }
+
+  private waitForPageLoadEvent(
+    sessionId: string,
+    timeoutMs: number
+  ): { promise: Promise<void>; cancel: () => void } {
+    let settled = false;
+    let unsubscribe = (): void => undefined;
+    let timer: NodeJS.Timeout;
+
+    const promise = new Promise<void>((resolve, reject) => {
+      const finish = (callback: () => void): void => {
+        if (settled) {
+          return;
+        }
+        settled = true;
+        clearTimeout(timer);
+        unsubscribe();
+        callback();
+      };
+
+      timer = setTimeout(() => {
+        finish(() => reject(new Error("Timed out waiting for page load")));
+      }, timeoutMs);
+
+      unsubscribe = this.connection.onEvent((message) => {
+        if (message.method === "Page.loadEventFired" && message.sessionId === sessionId) {
+          finish(resolve);
+        }
+      });
+    });
+
+    return {
+      promise,
+      cancel: () => {
+        if (settled) {
+          return;
+        }
+        settled = true;
+        clearTimeout(timer);
+        unsubscribe();
+      }
+    };
+  }
+
+  private async createTargetOrReuseExisting(
+    url?: string,
+    contextId?: string
+  ): Promise<{ target: TargetInfo; reused: boolean }> {
+    try {
+      const target = await this.connection.call<TargetResult>("Target.createTarget", {
+        url: url ?? "about:blank",
+        ...(contextId ? { browserContextId: contextId } : {})
+      });
+      return { target: { targetId: target.targetId, browserContextId: contextId }, reused: false };
+    } catch (error) {
+      if (!isTargetAlreadyLoadedError(error)) {
+        throw error;
+      }
+    }
+
+    const targets = await this.connection.call<TargetsResult>("Target.getTargets");
+    const target = (targets.targetInfos ?? []).find(
+      (candidate) =>
+        (candidate.type === "page" || !candidate.type) &&
+        (!contextId || candidate.browserContextId === contextId)
+    );
+    if (!target) {
+      throw new Error("TargetAlreadyLoaded, and no existing page target was available to reuse");
+    }
+    return { target, reused: true };
   }
 
   private async attach(
@@ -960,6 +1050,11 @@ function escapeForJs(value: string): string {
 function isUnsupportedCdpError(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error);
   return message === "UnknownDomain" || message === "UnknownMethod" || message.includes("wasn't found");
+}
+
+function isTargetAlreadyLoadedError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.includes("TargetAlreadyLoaded");
 }
 
 function isFileUploadFallbackError(error: unknown): boolean {
